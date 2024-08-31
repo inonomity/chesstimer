@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Timer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #333;
+            font-family: Arial, sans-serif;
+        }
+
+        #reset-button {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        #timer-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        .timer-box {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #444;
+            color: white;
+            font-size: 3em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .active {
+            background-color: green;
+        }
+
+        .expired {
+            background-color: red;
+        }
+
+        @media (min-width: 600px) {
+            #timer-container {
+                flex-direction: row;
+            }
+            .timer-box {
+                font-size: 5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="reset-button">Reset</button>
+    <div id="timer-container">
+        <div id="timer1" class="timer-box">00:00</div>
+        <div id="timer2" class="timer-box">00:00</div>
+    </div>
+
+    <script>
+        // Variables to hold timer values and state
+        let timer1Time, timer2Time;
+        let timer1Interval, timer2Interval;
+        let activeTimer;
+
+        // Function to initialize the timers
+        function initTimers() {
+            // Check if there are saved values in localStorage
+            if (localStorage.getItem('timer1Time') && localStorage.getItem('timer2Time') && localStorage.getItem('activeTimer')) {
+                timer1Time = parseInt(localStorage.getItem('timer1Time'));
+                timer2Time = parseInt(localStorage.getItem('timer2Time'));
+                activeTimer = parseInt(localStorage.getItem('activeTimer'));
+            } else {
+                const minutes = prompt("Enter the number of minutes:");
+                timer1Time = timer2Time = minutes * 60;
+                activeTimer = 1;
+            }
+            updateDisplay();
+            startTimer();
+        }
+
+        // Function to update the displayed time on the timers
+        function updateDisplay() {
+            document.getElementById('timer1').textContent = formatTime(timer1Time);
+            document.getElementById('timer2').textContent = formatTime(timer2Time);
+            document.getElementById('timer1').classList.remove('active');
+            document.getElementById('timer2').classList.remove('active');
+            document.getElementById(`timer${activeTimer}`).classList.add('active');
+        }
+
+        // Function to format seconds into mm:ss format
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = seconds % 60;
+            return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        // Function to start the active timer
+        function startTimer() {
+            clearInterval(timer1Interval);
+            clearInterval(timer2Interval);
+
+            if (activeTimer === 1) {
+                timer1Interval = setInterval(() => updateTimer(1), 1000);
+            } else {
+                timer2Interval = setInterval(() => updateTimer(2), 1000);
+            }
+        }
+
+        // Function to update the timers and check for expiration
+        function updateTimer(timer) {
+            if (timer === 1) {
+                timer1Time--;
+                if (timer1Time <= 0) {
+                    clearInterval(timer1Interval);
+                    document.getElementById('timer1').classList.add('expired');
+                    alert("Time has ended for Timer 1!");
+                }
+            } else {
+                timer2Time--;
+                if (timer2Time <= 0) {
+                    clearInterval(timer2Interval);
+                    document.getElementById('timer2').classList.add('expired');
+                    alert("Time has ended for Timer 2!");
+                }
+            }
+            updateDisplay();
+            saveState();
+        }
+
+        // Function to switch between timers
+        function switchTimer() {
+            if (timer1Time <= 0 || timer2Time <= 0) return;
+
+            if (activeTimer === 1) {
+                activeTimer = 2;
+            } else {
+                activeTimer = 1;
+            }
+            updateDisplay();
+            startTimer();
+            saveState();
+        }
+
+        // Function to save the state of the timers in localStorage
+        function saveState() {
+            localStorage.setItem('timer1Time', timer1Time);
+            localStorage.setItem('timer2Time', timer2Time);
+            localStorage.setItem('activeTimer', activeTimer);
+        }
+
+        // Function to reset the timers and clear localStorage
+        function resetTimers() {
+            clearInterval(timer1Interval);
+            clearInterval(timer2Interval);
+            localStorage.clear();
+            location.reload();
+        }
+
+        // Event listeners to start the timer when a box is clicked
+        document.getElementById('timer1').addEventListener('click', () => {
+            if (activeTimer === 1) switchTimer();
+        });
+
+        document.getElementById('timer2').addEventListener('click', () => {
+            if (activeTimer === 2) switchTimer();
+        });
+
+        // Event listener for the reset button
+        document.getElementById('reset-button').addEventListener('click', resetTimers);
+
+        // Initialize timers on page load
+        window.onload = initTimers;
+    </script>
+</body>
+</html>
