@@ -17,14 +17,13 @@
             font-family: Arial, sans-serif;
         }
 
-        #reset-button {
-            background-color: red;
+        #reset-button, #play-pause-button {
+            background-color: transparent;
             color: white;
             border: none;
-            padding: 10px 20px;
             font-size: 1.2em;
             cursor: pointer;
-            margin-bottom: 20px;
+            margin: 10px;
         }
 
         #timer-container {
@@ -62,38 +61,109 @@
                 font-size: 5em;
             }
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        .modal-button {
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .bg-green{
+            background-color: #69923e;
+        }
+        .bg-dark{
+            background-color: #2c2b29;
+        }
+
+        #moves-counter {
+            color: white;
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <button id="reset-button">Reset</button>
     <div id="timer-container">
         <div id="timer1" class="timer-box">00:00</div>
+        <div style="display: flex;flex-direction: column; justify-content: center;">
+            <button id="reset-button"><svg fill="#6c8a8d" width="42px" height="42px" viewBox="-192 -192 2304.00 2304.00" xmlns="http://www.w3.org/2000/svg" stroke="#6c8a8d" stroke-width="138.23999999999998"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M960 0v213.333c411.627 0 746.667 334.934 746.667 746.667S1371.627 1706.667 960 1706.667 213.333 1371.733 213.333 960c0-197.013 78.4-382.507 213.334-520.747v254.08H640V106.667H53.333V320h191.04C88.64 494.08 0 720.96 0 960c0 529.28 430.613 960 960 960s960-430.72 960-960S1489.387 0 960 0" fill-rule="evenodd"></path> </g></svg></button>
+
+            <button id="play-pause-button"><svg fill="#6c8a8d" viewBox="0 0 256 256" id="Flat" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g > <path d="M228.14833,121.17381,84.1717,33.18517A8,8,0,0,0,72,40.01136V215.98864a8,8,0,0,0,12.1717,6.82619l143.97663-87.98864A8,8,0,0,0,228.14833,121.17381Z"></path> </g> <path d="M79.999,231.98584A15.99352,15.99352,0,0,1,64,215.98877V40.01123A16.00034,16.00034,0,0,1,88.34375,26.35889l143.97656,87.98877h0a16.0003,16.0003,0,0,1,0,27.30468L88.34375,229.64111A15.9968,15.9968,0,0,1,79.999,231.98584ZM80,40.01123V215.98877L223.97656,128Z"></path> </g></svg></button>
+        </div>
         <div id="timer2" class="timer-box">00:00</div>
     </div>
 
-    <script>
-        // Variables to hold timer values and state
+    <div id="moves-counter">Moves: 0</div>
+
+    <!-- Modal for reset confirmation -->
+    <div id="reset-modal" class="modal">
+        <div class="modal-content">
+            <p>Do you want to reset the timers?</p>
+            <button id="confirm-reset" class="modal-button bg-green">Yes</button>
+            <button id="cancel-reset" class="modal-button bg-dark">No</button>
+        </div>
+    </div>
+
+    <!-- Audio element for click sound -->
+    <!-- <audio id="click-sound" src="click-sound.mp3"></audio> -->
+
+<script>
+    
+    document.addEventListener('DOMContentLoaded', function() {
+            
         let timer1Time, timer2Time;
         let timer1Interval, timer2Interval;
         let activeTimer;
+        let isPaused = false;
+        let moves = 0;
+        let player1Clicked = false;
+        let player2Clicked = false;
 
-        // Function to initialize the timers
         function initTimers() {
-            // Check if there are saved values in localStorage
             if (localStorage.getItem('timer1Time') && localStorage.getItem('timer2Time') && localStorage.getItem('activeTimer')) {
                 timer1Time = parseInt(localStorage.getItem('timer1Time'));
                 timer2Time = parseInt(localStorage.getItem('timer2Time'));
                 activeTimer = parseInt(localStorage.getItem('activeTimer'));
             } else {
                 const minutes = prompt("Enter the number of minutes:");
-                timer1Time = timer2Time = minutes * 60;
-                activeTimer = 1;
+                if (minutes && !isNaN(minutes) && minutes > 0) {
+                    timer1Time = timer2Time = minutes * 60;
+                    activeTimer = 1;
+                } else {
+                    alert("Invalid input. Please enter a valid number of minutes.");
+                    location.reload();
+                }
             }
             updateDisplay();
             startTimer();
         }
 
-        // Function to update the displayed time on the timers
         function updateDisplay() {
             document.getElementById('timer1').textContent = formatTime(timer1Time);
             document.getElementById('timer2').textContent = formatTime(timer2Time);
@@ -102,14 +172,12 @@
             document.getElementById(`timer${activeTimer}`).classList.add('active');
         }
 
-        // Function to format seconds into mm:ss format
         function formatTime(seconds) {
             const min = Math.floor(seconds / 60);
             const sec = seconds % 60;
             return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
         }
 
-        // Function to start the active timer
         function startTimer() {
             clearInterval(timer1Interval);
             clearInterval(timer2Interval);
@@ -119,10 +187,12 @@
             } else {
                 timer2Interval = setInterval(() => updateTimer(2), 1000);
             }
+            document.getElementById('play-pause-button').innerHTML ='<svg width="42px" height="42px" fill="#6c8a8d" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <title>pause</title> <path d="M5.92 24.096q0 0.832 0.576 1.408t1.44 0.608h4.032q0.832 0 1.44-0.608t0.576-1.408v-16.16q0-0.832-0.576-1.44t-1.44-0.576h-4.032q-0.832 0-1.44 0.576t-0.576 1.44v16.16zM18.016 24.096q0 0.832 0.608 1.408t1.408 0.608h4.032q0.832 0 1.44-0.608t0.576-1.408v-16.16q0-0.832-0.576-1.44t-1.44-0.576h-4.032q-0.832 0-1.408 0.576t-0.608 1.44v16.16z"></path> </g></svg>' ;
         }
 
-        // Function to update the timers and check for expiration
         function updateTimer(timer) {
+            if (isPaused) return;
+
             if (timer === 1) {
                 timer1Time--;
                 if (timer1Time <= 0) {
@@ -142,28 +212,28 @@
             saveState();
         }
 
-        // Function to switch between timers
         function switchTimer() {
             if (timer1Time <= 0 || timer2Time <= 0) return;
 
             if (activeTimer === 1) {
                 activeTimer = 2;
+                player1Clicked = true;
             } else {
                 activeTimer = 1;
+                player2Clicked = true;
             }
             updateDisplay();
             startTimer();
             saveState();
+            checkAndIncrementMoves();
         }
 
-        // Function to save the state of the timers in localStorage
         function saveState() {
             localStorage.setItem('timer1Time', timer1Time);
             localStorage.setItem('timer2Time', timer2Time);
             localStorage.setItem('activeTimer', activeTimer);
         }
 
-        // Function to reset the timers and clear localStorage
         function resetTimers() {
             clearInterval(timer1Interval);
             clearInterval(timer2Interval);
@@ -171,7 +241,25 @@
             location.reload();
         }
 
-        // Event listeners to start the timer when a box is clicked
+        function togglePlayPause() {
+            isPaused = !isPaused;
+            document.getElementById('play-pause-button').innerHTML = isPaused ? '<svg fill="#6c8a8d" viewBox="0 0 256 256" id="Flat" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g > <path d="M228.14833,121.17381,84.1717,33.18517A8,8,0,0,0,72,40.01136V215.98864a8,8,0,0,0,12.1717,6.82619l143.97663-87.98864A8,8,0,0,0,228.14833,121.17381Z"></path> </g> <path d="M79.999,231.98584A15.99352,15.99352,0,0,1,64,215.98877V40.01123A16.00034,16.00034,0,0,1,88.34375,26.35889l143.97656,87.98877h0a16.0003,16.0003,0,0,1,0,27.30468L88.34375,229.64111A15.9968,15.9968,0,0,1,79.999,231.98584ZM80,40.01123V215.98877L223.97656,128Z"></path> </g></svg>': '<svg width="42px" height="42px" fill="#6c8a8d" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <title>pause</title> <path d="M5.92 24.096q0 0.832 0.576 1.408t1.44 0.608h4.032q0.832 0 1.44-0.608t0.576-1.408v-16.16q0-0.832-0.576-1.44t-1.44-0.576h-4.032q-0.832 0-1.44 0.576t-0.576 1.44v16.16zM18.016 24.096q0 0.832 0.608 1.408t1.408 0.608h4.032q0.832 0 1.44-0.608t0.576-1.408v-16.16q0-0.832-0.576-1.44t-1.44-0.576h-4.032q-0.832 0-1.408 0.576t-0.608 1.44v16.16z"></path> </g></svg>' ;
+        }
+
+        // // Function to play click sound
+        // function playClickSound() {
+        //     document.getElementById('click-sound').play();
+        // }
+
+        function checkAndIncrementMoves() {
+            if (player1Clicked && player2Clicked) {
+                moves++;
+                document.getElementById('moves-counter').textContent = `Moves: ${moves}`;
+                player1Clicked = false;
+                player2Clicked = false;
+            }
+        }
+
         document.getElementById('timer1').addEventListener('click', () => {
             if (activeTimer === 1) switchTimer();
         });
@@ -180,11 +268,23 @@
             if (activeTimer === 2) switchTimer();
         });
 
-        // Event listener for the reset button
-        document.getElementById('reset-button').addEventListener('click', resetTimers);
+        document.getElementById('reset-button').addEventListener('click', () => {
+            isPaused = true;
+            document.getElementById('reset-modal').style.display = 'flex';
+        });
 
-        // Initialize timers on page load
+        document.getElementById('confirm-reset').addEventListener('click', resetTimers);
+        document.getElementById('cancel-reset').addEventListener('click', () => {
+            isPaused = false;
+            document.getElementById('reset-modal').style.display = 'none';
+            startTimer();
+        });
+
+        document.getElementById('play-pause-button').addEventListener('click', togglePlayPause);
+
         window.onload = initTimers;
-    </script>
+
+    });
+</script>
 </body>
 </html>
